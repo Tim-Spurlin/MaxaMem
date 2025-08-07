@@ -1,13 +1,3 @@
-This script is to be used inside of the ChatGpt Codex Web Enviroment Manual Setup for the Setup Script
-This isi what it will do:
-
-Create the backend source structure first
-Then create Cargo.toml (which can now find the source files)
-Build will work without the "no targets specified" error
-Handle cases where Docker isn't available in Codex
-Provide a working development environment
-
-```
 #!/bin/bash
 set -e
 
@@ -97,7 +87,7 @@ fi
 
 # Create project structure
 print_status "Creating project structure..."
-mkdir -p docgen-saas/{backend/src/{api,models,services,utils},frontend/src/{components,pages,hooks,services,types},migrations,scripts,config,docs,.github/workflows}
+mkdir -p docgen-saas/{backend/src/{api,models,services,utils},frontend/src/{components,pages,hooks,services,types,lib},migrations,scripts,config,docs,.github/workflows}
 
 cd docgen-saas
 
@@ -110,6 +100,7 @@ use tracing::info;
 use tracing_subscriber;
 
 mod api;
+mod services;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -120,6 +111,9 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     
     info!("Starting DocGen SaaS server...");
+    
+    // Validate required environment variables
+    validate_env_vars();
     
     // Database connection
     let database_url = std::env::var("DATABASE_URL")
@@ -154,6 +148,33 @@ async fn main() -> std::io::Result<()> {
 async fn health_check() -> &'static str {
     "OK"
 }
+
+fn validate_env_vars() {
+    let required_vars = vec![
+        "OPENAI_API_KEY",
+        "OPENAI_ORG_ID",
+        "CLAUDE_API_KEY",
+        "GITHUB_TOKEN",
+        "GITHUB_OWNER",
+        "STRIPE_SECRET_KEY",
+        "JWT_SECRET",
+    ];
+    
+    let mut missing_vars = Vec::new();
+    
+    for var in required_vars {
+        if std::env::var(var).is_err() {
+            missing_vars.push(var);
+        }
+    }
+    
+    if !missing_vars.is_empty() {
+        tracing::warn!(
+            "Missing environment variables: {:?}. Please set them in .env file",
+            missing_vars
+        );
+    }
+}
 EOF
 
 # Create api module files
@@ -162,7 +183,123 @@ pub mod auth;
 pub mod projects;
 EOF
 
-# Create placeholder files for modules
+# Create services module
+cat > backend/src/services/mod.rs << 'EOF'
+pub mod openai_service;
+pub mod claude_service;
+pub mod github_service;
+
+pub use openai_service::OpenAIService;
+pub use claude_service::ClaudeService;
+pub use github_service::GitHubService;
+EOF
+
+# Create OpenAI service with Organization ID support
+cat > backend/src/services/openai_service.rs << 'EOF'
+use async_openai::{Client, config::OpenAIConfig};
+use anyhow::Result;
+
+pub struct OpenAIService {
+    client: Client<OpenAIConfig>,
+}
+
+impl OpenAIService {
+    pub fn new() -> Result<Self> {
+        let api_key = std::env::var("OPENAI_API_KEY")
+            .expect("OPENAI_API_KEY must be set in environment");
+        
+        let org_id = std::env::var("OPENAI_ORG_ID")
+            .expect("OPENAI_ORG_ID must be set in environment");
+        
+        let config = OpenAIConfig::new()
+            .with_api_key(api_key)
+            .with_org_id(org_id);
+        
+        let client = Client::with_config(config);
+        
+        Ok(Self { client })
+    }
+    
+    pub async fn generate_completion(&self, prompt: &str) -> Result<String> {
+        // Implementation here
+        Ok(String::from("Generated content"))
+    }
+}
+EOF
+
+# Create Claude service
+cat > backend/src/services/claude_service.rs << 'EOF'
+use anyhow::Result;
+use reqwest;
+use serde_json::json;
+
+pub struct ClaudeService {
+    client: reqwest::Client,
+    api_key: String,
+}
+
+impl ClaudeService {
+    pub fn new() -> Result<Self> {
+        let api_key = std::env::var("CLAUDE_API_KEY")
+            .expect("CLAUDE_API_KEY must be set in environment");
+        
+        let client = reqwest::Client::new();
+        
+        Ok(Self { client, api_key })
+    }
+    
+    pub async fn generate(&self, prompt: &str) -> Result<String> {
+        let response = self.client
+            .post("https://api.anthropic.com/v1/messages")
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .json(&json!({
+                "model": "claude-3-opus-20240229",
+                "max_tokens": 4096,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            }))
+            .send()
+            .await?;
+        
+        // Parse response
+        Ok(String::from("Generated content"))
+    }
+}
+EOF
+
+# Create GitHub service
+cat > backend/src/services/github_service.rs << 'EOF'
+use anyhow::Result;
+
+pub struct GitHubService {
+    token: String,
+    owner: String,
+}
+
+impl GitHubService {
+    pub fn new() -> Result<Self> {
+        let token = std::env::var("GITHUB_TOKEN")
+            .expect("GITHUB_TOKEN must be set in environment");
+        
+        let owner = std::env::var("GITHUB_OWNER")
+            .expect("GITHUB_OWNER must be set in environment");
+        
+        Ok(Self { token, owner })
+    }
+    
+    pub async fn create_repository(&self, name: &str) -> Result<String> {
+        // Implementation here
+        Ok(format!("https://github.com/{}/{}", self.owner, name))
+    }
+}
+EOF
+
+# Create placeholder files for API modules
 touch backend/src/api/auth.rs
 touch backend/src/api/projects.rs
 
@@ -269,36 +406,170 @@ cat > frontend/package.json << 'EOF'
 }
 EOF
 
-# Create .env.example
+# Create .env.example with ALL required variables including Organization ID
 cat > .env.example << 'EOF'
-# Database
+# Database Configuration
 DATABASE_URL=postgresql://docgen:docgen_pass@localhost:5432/docgen_db
 REDIS_URL=redis://localhost:6379
 
-# AI Services
-OPENAI_API_KEY=sk-...
-CLAUDE_API_KEY=sk-ant-...
+# OpenAI Configuration
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your_openai_api_key_here
+# Get your Organization ID from: https://platform.openai.com/account/organization
+OPENAI_ORG_ID=your_openai_org_id_here
 
-# GitHub
-GITHUB_TOKEN=ghp_...
-GITHUB_OWNER=your-github-username
+# Claude (Anthropic) Configuration
+# Get your API key from: https://console.anthropic.com/settings/keys
+CLAUDE_API_KEY=your_claude_api_key_here
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLIC_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+# GitHub Configuration
+# Create a personal access token at: https://github.com/settings/tokens
+# Required scopes: repo, workflow
+GITHUB_TOKEN=your_github_token_here
+GITHUB_OWNER=your_github_username_here
 
-# Security
-JWT_SECRET=your-256-bit-secret-key-here
-ENCRYPTION_KEY=your-encryption-key-here
+# Stripe Configuration
+# Get your keys from: https://dashboard.stripe.com/apikeys
+STRIPE_SECRET_KEY=your_stripe_secret_key_here
+STRIPE_PUBLIC_KEY=your_stripe_public_key_here
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 
-# App
+# Security Keys (Generate these - do not use defaults in production!)
+# Generate with: openssl rand -hex 32
+JWT_SECRET=your_256_bit_secret_key_here
+ENCRYPTION_KEY=your_encryption_key_here
+
+# Application URLs
 FRONTEND_URL=http://localhost:3000
 API_URL=http://localhost:8080
+
+# Optional: Email Configuration (for notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password_here
 EOF
 
-# Copy .env.example to .env
+# Create .env from template (user will need to fill in their keys)
 cp .env.example .env
+
+# Add a note about environment variables
+cat > SETUP_INSTRUCTIONS.md << 'EOF'
+# Setup Instructions
+
+## Required Environment Variables
+
+Before running the application, you MUST set the following environment variables in the `.env` file:
+
+### OpenAI Configuration
+1. **OPENAI_API_KEY**: Your OpenAI API key
+   - Get it from: https://platform.openai.com/api-keys
+   
+2. **OPENAI_ORG_ID**: Your OpenAI Organization ID
+   - Find it at: https://platform.openai.com/account/organization
+   - Look for "Organization ID" on the settings page
+
+### Claude Configuration
+3. **CLAUDE_API_KEY**: Your Anthropic Claude API key
+   - Get it from: https://console.anthropic.com/settings/keys
+
+### GitHub Configuration
+4. **GITHUB_TOKEN**: Personal Access Token with repo permissions
+   - Create at: https://github.com/settings/tokens
+   - Required scopes: `repo`, `workflow`
+   
+5. **GITHUB_OWNER**: Your GitHub username or organization name
+
+### Stripe Configuration
+6. **STRIPE_SECRET_KEY**: Your Stripe secret key
+7. **STRIPE_PUBLIC_KEY**: Your Stripe publishable key
+8. **STRIPE_WEBHOOK_SECRET**: Your webhook endpoint secret
+   - Get all from: https://dashboard.stripe.com/apikeys
+
+### Security Keys
+9. **JWT_SECRET**: A 256-bit secret for JWT signing
+   - Generate with: `openssl rand -hex 32`
+   
+10. **ENCRYPTION_KEY**: A key for encrypting sensitive data
+    - Generate with: `openssl rand -hex 32`
+
+## Quick Start
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and add your API keys:
+   ```bash
+   nano .env
+   ```
+
+3. Start the application:
+   ```bash
+   ./run.sh
+   ```
+
+## Verification
+
+To verify your environment variables are set correctly:
+```bash
+# Check if all required variables are set
+./scripts/check-env.sh
+```
+EOF
+
+# Create environment checker script
+mkdir -p scripts
+cat > scripts/check-env.sh << 'EOF'
+#!/bin/bash
+
+echo "Checking environment variables..."
+
+REQUIRED_VARS=(
+    "OPENAI_API_KEY"
+    "OPENAI_ORG_ID"
+    "CLAUDE_API_KEY"
+    "GITHUB_TOKEN"
+    "GITHUB_OWNER"
+    "STRIPE_SECRET_KEY"
+    "STRIPE_PUBLIC_KEY"
+    "JWT_SECRET"
+    "ENCRYPTION_KEY"
+)
+
+MISSING_VARS=()
+
+# Load .env file
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+for var in "${REQUIRED_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        MISSING_VARS+=($var)
+        echo "❌ $var is not set"
+    else
+        # Mask the value for security
+        masked_value="${!var:0:4}...${!var: -4}"
+        echo "✅ $var is set: $masked_value"
+    fi
+done
+
+if [ ${#MISSING_VARS[@]} -eq 0 ]; then
+    echo ""
+    echo "✅ All required environment variables are set!"
+else
+    echo ""
+    echo "❌ Missing ${#MISSING_VARS[@]} required environment variables:"
+    printf '%s\n' "${MISSING_VARS[@]}"
+    echo ""
+    echo "Please edit .env file and add the missing variables."
+    exit 1
+fi
+EOF
+
+chmod +x scripts/check-env.sh
 
 # Create docker-compose.yml
 cat > docker-compose.yml << 'EOF'
@@ -390,20 +661,32 @@ CREATE TABLE IF NOT EXISTS generation_jobs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- API usage tracking table
+CREATE TABLE IF NOT EXISTS api_usage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    service VARCHAR(50) NOT NULL, -- 'openai', 'claude', 'github'
+    tokens_used INTEGER,
+    cost DECIMAL(10, 4),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_documents_project_id ON documents(project_id);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_project_id ON generation_jobs(project_id);
+CREATE INDEX IF NOT EXISTS idx_api_usage_user_id ON api_usage(user_id);
 EOF
 
 # Create Makefile
 cat > Makefile << 'EOF'
-.PHONY: help setup dev build test clean docker-up docker-down
+.PHONY: help setup dev build test clean docker-up docker-down check-env
 
 help:
 	@echo "Available commands:"
 	@echo "  make setup       - Initial setup"
+	@echo "  make check-env   - Verify environment variables"
 	@echo "  make dev         - Start development environment"
 	@echo "  make build       - Build for production"
 	@echo "  make test        - Run tests"
@@ -411,13 +694,21 @@ help:
 	@echo "  make docker-up   - Start Docker services"
 	@echo "  make docker-down - Stop Docker services"
 
+check-env:
+	@./scripts/check-env.sh
+
 setup: docker-up
 	@echo "Setting up development environment..."
 	@sleep 5
 	cd backend && cargo build || true
 	cd frontend && pnpm install
+	@echo ""
+	@echo "Setup complete! Now configure your environment:"
+	@echo "  1. Edit .env file with your API keys"
+	@echo "  2. Run: make check-env"
+	@echo "  3. Run: make dev"
 
-dev:
+dev: check-env
 	@echo "Starting development servers..."
 	make docker-up
 	@echo "Starting backend on http://localhost:8080"
@@ -463,24 +754,58 @@ cat > README.md << 'EOF'
 
 AI-powered project documentation and GitHub scaffolding platform.
 
+## Prerequisites
+
+- Rust 1.70+
+- Node.js 20+
+- PostgreSQL 15+
+- Redis 7+
+
+## Required API Keys
+
+You must have accounts and API keys for:
+- OpenAI (with Organization ID)
+- Anthropic Claude
+- GitHub (Personal Access Token)
+- Stripe (for payments)
+
 ## Quick Start
 
-1. **Setup environment:**
+1. **Clone and setup:**
    ```bash
    make setup
    ```
 
-2. **Configure API keys:**
-   Edit `.env` file with your API keys
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   nano .env  # Add your API keys
+   ```
 
-3. **Start development:**
+3. **Verify configuration:**
+   ```bash
+   make check-env
+   ```
+
+4. **Start development:**
    ```bash
    make dev
    ```
 
-4. **Access the application:**
+5. **Access the application:**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
+
+## Environment Variables
+
+See `.env.example` for all required variables. You MUST set:
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `OPENAI_ORG_ID` - Your OpenAI Organization ID
+- `CLAUDE_API_KEY` - Your Anthropic API key
+- `GITHUB_TOKEN` - GitHub Personal Access Token
+- `GITHUB_OWNER` - Your GitHub username
+- `STRIPE_SECRET_KEY` - Stripe secret key
+- `JWT_SECRET` - Generated secret for JWT
 
 ## Features
 
@@ -525,6 +850,32 @@ cd ..
 print_status "Installing frontend dependencies..."
 cd frontend
 
+# Create environment configuration helper
+cat > src/lib/env.ts << 'EOF'
+// Environment variable configuration
+export const env = {
+  // API URLs
+  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
+  
+  // Stripe
+  STRIPE_PUBLIC_KEY: import.meta.env.VITE_STRIPE_PUBLIC_KEY || '',
+  
+  // Feature flags
+  IS_PRODUCTION: import.meta.env.PROD,
+  IS_DEVELOPMENT: import.meta.env.DEV,
+} as const;
+
+// Validate required environment variables
+export function validateEnv() {
+  const required = ['VITE_STRIPE_PUBLIC_KEY'];
+  const missing = required.filter(key => !import.meta.env[key]);
+  
+  if (missing.length > 0 && import.meta.env.PROD) {
+    console.error('Missing required environment variables:', missing);
+  }
+}
+EOF
+
 # Create vite config
 cat > vite.config.ts << 'EOF'
 import { defineConfig } from 'vite'
@@ -540,6 +891,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  define: {
+    // Pass environment variables to the app
+    'process.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(process.env.VITE_STRIPE_PUBLIC_KEY),
   },
 })
 EOF
@@ -587,7 +942,10 @@ cat > tsconfig.json << 'EOF'
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
@@ -608,12 +966,23 @@ cat > tsconfig.node.json << 'EOF'
 }
 EOF
 
+# Create .env for frontend
+cat > .env << 'EOF'
+# Frontend environment variables
+VITE_API_URL=http://localhost:8080
+VITE_STRIPE_PUBLIC_KEY=your_stripe_public_key_here
+EOF
+
 # Create main.tsx
 cat > src/main.tsx << 'EOF'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
 import './index.css'
+import { validateEnv } from './lib/env'
+
+// Validate environment variables
+validateEnv();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -625,15 +994,26 @@ EOF
 # Create App.tsx
 cat > src/App.tsx << 'EOF'
 import React, { useEffect, useState } from 'react'
+import { env } from './lib/env'
 
 export const App: React.FC = () => {
   const [health, setHealth] = useState<string>('checking...')
+  const [envStatus, setEnvStatus] = useState<Record<string, boolean>>({})
   
   useEffect(() => {
-    fetch('http://localhost:8080/api/health')
+    // Check backend health
+    fetch(`${env.API_URL}/api/health`)
       .then(res => res.text())
       .then(data => setHealth(data))
       .catch(() => setHealth('Backend not connected'))
+    
+    // Check environment variables (only show in dev)
+    if (env.IS_DEVELOPMENT) {
+      setEnvStatus({
+        'API URL': !!env.API_URL,
+        'Stripe Public Key': !!env.STRIPE_PUBLIC_KEY,
+      })
+    }
   }, [])
   
   return (
@@ -647,7 +1027,7 @@ export const App: React.FC = () => {
             AI-powered project documentation generator
           </p>
           
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-2xl font-semibold mb-4">System Status</h2>
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
@@ -662,6 +1042,25 @@ export const App: React.FC = () => {
               </div>
             </div>
           </div>
+          
+          {env.IS_DEVELOPMENT && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4">Environment Variables</h2>
+              <div className="space-y-2">
+                {Object.entries(envStatus).map(([key, isSet]) => (
+                  <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <span className="text-sm">{key}</span>
+                    <span className={isSet ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
+                      {isSet ? '✓ Set' : '✗ Not Set'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-4">
+                Note: Backend API keys are not exposed to the frontend
+              </p>
+            </div>
+          )}
           
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
@@ -722,6 +1121,7 @@ dist/
 # Environment
 .env
 .env.local
+*.env
 
 # IDE
 .vscode/
@@ -741,11 +1141,33 @@ Thumbs.db
 
 # Database
 postgres_data/
+
+# Sensitive
+*.key
+*.pem
+*.cert
 EOF
 
 # Create a simple run script
 cat > run.sh << 'EOF'
 #!/bin/bash
+
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Check environment variables first
+echo "Checking environment variables..."
+./scripts/check-env.sh
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "Please configure your environment variables first!"
+    echo "Edit the .env file with your API keys."
+    exit 1
+fi
+
 echo "Starting DocGen SaaS..."
 
 # Start Docker services if available
@@ -839,19 +1261,23 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "Project created in: $(pwd)"
 echo ""
-echo "Quick start:"
-echo "  1. Edit .env file with your API keys"
-echo "  2. Run: ./run.sh"
+print_info "IMPORTANT: You must configure your API keys before running!"
 echo ""
-echo "Or manually:"
-echo "  Backend:  cd backend && cargo run"
-echo "  Frontend: cd frontend && pnpm dev"
+echo "Required API Keys:"
+echo "  1. OPENAI_API_KEY     - Get from: https://platform.openai.com/api-keys"
+echo "  2. OPENAI_ORG_ID      - Get from: https://platform.openai.com/account/organization"
+echo "  3. CLAUDE_API_KEY     - Get from: https://console.anthropic.com/settings/keys"
+echo "  4. GITHUB_TOKEN       - Get from: https://github.com/settings/tokens"
+echo "  5. STRIPE_SECRET_KEY  - Get from: https://dashboard.stripe.com/apikeys"
+echo ""
+echo "Setup Steps:"
+echo "  1. Edit the .env file: nano .env"
+echo "  2. Add your API keys (see .env.example for format)"
+echo "  3. Verify setup: make check-env"
+echo "  4. Start the app: ./run.sh"
 echo ""
 echo "Access points:"
 echo "  Frontend:  http://localhost:3000"
 echo "  Backend:   http://localhost:8080"
 echo ""
 print_info "Happy coding! 🚀"
-
-```
-
