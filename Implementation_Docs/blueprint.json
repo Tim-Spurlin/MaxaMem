@@ -1,0 +1,486 @@
+{
+  "projectName": "MaxaMem",
+  "version": "1.0.0",
+  "domain": "maxamem.com",
+  "repository": "git@github.com:Tim-Spurlin/MaxaMem.git",
+  "description": "AI-powered SaaS platform that transforms project descriptions into complete architectures with intelligent communication schemas",
+  "corePhilosophy": "Automate the entire project scaffolding process by leveraging AI to generate comprehensive documentation, communication blueprints, and fully populated GitHub repositories from a single user prompt",
+  
+  "architecture": {
+    "type": "microservices",
+    "deployment": "containerized",
+    "scaling": "horizontal",
+    "patterns": ["event-driven", "pipeline", "state-machine"],
+    
+    "layers": {
+      "presentation": {
+        "technologies": ["React", "TypeScript", "Tailwind CSS"],
+        "components": ["SPA", "PWA", "Admin Dashboard"],
+        "communication": "REST API, WebSocket, GraphQL"
+      },
+      "application": {
+        "technologies": ["Rust", "Actix-Web", "Tokio"],
+        "services": ["API Server", "Generation Engine", "Schema Generator", "Worker Pool"],
+        "patterns": ["CQRS", "Event Sourcing", "State Machine"]
+      },
+      "integration": {
+        "technologies": ["gRPC", "Redis Queue", "WebSocket"],
+        "services": ["AI Proxy", "GitHub Client", "Stripe Client"],
+        "protocols": ["HTTP/2", "WSS", "OAuth2"]
+      },
+      "data": {
+        "technologies": ["PostgreSQL", "Redis", "S3"],
+        "patterns": ["Repository", "Unit of Work", "CQRS"],
+        "features": ["Row-level security", "Encryption at rest", "Audit logging"]
+      }
+    }
+  },
+  
+  "modules": [
+    {
+      "name": "AuthenticationService",
+      "language": "Rust",
+      "framework": "Actix-Web",
+      "purpose": "Handle user authentication, JWT token generation, and session management",
+      "endpoints": [
+        "POST /api/auth/register",
+        "POST /api/auth/login",
+        "POST /api/auth/refresh",
+        "POST /api/auth/logout"
+      ],
+      "dependencies": ["jsonwebtoken", "argon2", "redis"],
+      "criticality": 10
+    },
+    {
+      "name": "ProjectService",
+      "language": "Rust",
+      "framework": "Actix-Web",
+      "purpose": "Manage project lifecycle from creation to completion",
+      "endpoints": [
+        "POST /api/projects",
+        "GET /api/projects",
+        "GET /api/projects/:id",
+        "DELETE /api/projects/:id"
+      ],
+      "dependencies": ["sqlx", "uuid", "serde"],
+      "criticality": 10
+    },
+    {
+      "name": "GenerationEngine",
+      "language": "Rust",
+      "framework": "Tokio",
+      "purpose": "Orchestrate the entire generation pipeline from description to repository",
+      "components": [
+        "PipelineOrchestrator",
+        "StateMachine",
+        "ArtifactManager",
+        "ProgressTracker"
+      ],
+      "dependencies": ["tokio", "async-trait", "futures"],
+      "criticality": 10
+    },
+    {
+      "name": "AIService",
+      "language": "Rust",
+      "framework": "Reqwest",
+      "purpose": "Interface with OpenAI and Claude APIs for content generation",
+      "methods": [
+        "generate_dev_plan",
+        "generate_tech_architecture",
+        "generate_blueprint",
+        "generate_main_readme"
+      ],
+      "dependencies": ["reqwest", "serde_json", "backoff"],
+      "criticality": 10
+    },
+    {
+      "name": "SchemaGenerator",
+      "language": "Rust",
+      "framework": "Custom",
+      "purpose": "Generate comprehensive communication schemas and directory documentation",
+      "algorithms": [
+        "ComponentExtractor",
+        "DependencyAnalyzer",
+        "CriticalityScorer",
+        "CommunicationMapper"
+      ],
+      "outputs": ["communication_schema.json", "directory_readmes"],
+      "criticality": 10
+    },
+    {
+      "name": "GitHubService",
+      "language": "Rust",
+      "framework": "Octocrab",
+      "purpose": "Create and populate GitHub repositories with generated content",
+      "operations": [
+        "create_repository",
+        "create_file",
+        "create_directory_structure",
+        "commit_changes"
+      ],
+      "dependencies": ["octocrab", "base64", "tokio"],
+      "criticality": 9
+    },
+    {
+      "name": "SubscriptionService",
+      "language": "Rust",
+      "framework": "Stripe-Rust",
+      "purpose": "Handle Stripe subscriptions and payment processing",
+      "webhooks": [
+        "subscription.created",
+        "subscription.updated",
+        "subscription.deleted",
+        "invoice.paid"
+      ],
+      "tiers": ["Starter", "Professional", "Enterprise"],
+      "criticality": 9
+    },
+    {
+      "name": "QueueWorker",
+      "language": "Rust",
+      "framework": "Redis + Tokio",
+      "purpose": "Process background jobs for generation pipeline",
+      "jobs": [
+        "GenerationJob",
+        "EmailJob",
+        "CleanupJob",
+        "UsageTrackingJob"
+      ],
+      "concurrency": 10,
+      "criticality": 9
+    },
+    {
+      "name": "WebSocketServer",
+      "language": "Rust",
+      "framework": "Actix-WS",
+      "purpose": "Real-time updates for generation progress",
+      "events": [
+        "generation:started",
+        "generation:progress",
+        "generation:completed",
+        "generation:failed"
+      ],
+      "criticality": 8
+    },
+    {
+      "name": "FrontendApp",
+      "language": "TypeScript",
+      "framework": "React",
+      "purpose": "Web interface for users to interact with the platform",
+      "pages": [
+        "HomePage",
+        "DashboardPage",
+        "ProjectPage",
+        "PricingPage",
+        "AuthPage"
+      ],
+      "state_management": "Zustand",
+      "criticality": 10
+    }
+  ],
+  
+  "dataModels": {
+    "User": {
+      "fields": {
+        "id": "UUID",
+        "email": "String",
+        "password_hash": "String",
+        "full_name": "String",
+        "stripe_customer_id": "String",
+        "subscription_tier": "Enum"
+      },
+      "relations": ["projects", "subscriptions", "api_usage"]
+    },
+    "Project": {
+      "fields": {
+        "id": "UUID",
+        "user_id": "UUID",
+        "name": "String",
+        "description": "Text",
+        "status": "Enum",
+        "progress": "Integer",
+        "repository_url": "String"
+      },
+      "relations": ["user", "artifacts"]
+    },
+    "GenerationArtifact": {
+      "fields": {
+        "id": "UUID",
+        "project_id": "UUID",
+        "artifact_type": "Enum",
+        "content": "JSONB"
+      },
+      "types": [
+        "dev_plan",
+        "tech_architecture",
+        "blueprint_json",
+        "main_readme",
+        "communication_schema",
+        "directory_tree"
+      ]
+    },
+    "Subscription": {
+      "fields": {
+        "id": "UUID",
+        "user_id": "UUID",
+        "stripe_subscription_id": "String",
+        "tier": "Enum",
+        "status": "String",
+        "current_period_start": "Timestamp",
+        "current_period_end": "Timestamp"
+      },
+      "tiers": {
+        "starter": {
+          "price": 29,
+          "projects_limit": 5,
+          "api_calls_limit": 100
+        },
+        "professional": {
+          "price": 99,
+          "projects_limit": 25,
+          "api_calls_limit": 500
+        },
+        "enterprise": {
+          "price": 299,
+          "projects_limit": null,
+          "api_calls_limit": 2000
+        }
+      }
+    }
+  },
+  
+  "generationPipeline": {
+    "stages": [
+      {
+        "stage": 1,
+        "name": "InitializeProject",
+        "actions": ["Create project record", "Validate user quota", "Enqueue job"],
+        "duration": "~1s"
+      },
+      {
+        "stage": 2,
+        "name": "GenerateDevPlan",
+        "ai_model": "GPT-4",
+        "prompt_template": "dev_plan_template",
+        "duration": "~5s"
+      },
+      {
+        "stage": 3,
+        "name": "GenerateTechArchitecture",
+        "ai_model": "GPT-4",
+        "inputs": ["description", "dev_plan"],
+        "duration": "~5s"
+      },
+      {
+        "stage": 4,
+        "name": "GenerateBlueprint",
+        "ai_model": "GPT-4",
+        "inputs": ["dev_plan", "tech_architecture"],
+        "duration": "~5s"
+      },
+      {
+        "stage": 5,
+        "name": "GenerateMainReadme",
+        "ai_model": "Claude-3-Opus",
+        "features": ["Visual diagrams", "Mermaid charts", "Interactive elements"],
+        "duration": "~8s"
+      },
+      {
+        "stage": 6,
+        "name": "GenerateCommunicationSchema",
+        "ai_model": "Claude-3-Opus",
+        "algorithm": "Custom schema analysis",
+        "outputs": ["Global protocols", "Directory configs", "Event flows", "Communication matrix"],
+        "duration": "~10s"
+      },
+      {
+        "stage": 7,
+        "name": "GenerateDirectoryStructure",
+        "actions": ["Parse schema", "Create tree", "Generate READMEs for each directory"],
+        "duration": "~5s"
+      },
+      {
+        "stage": 8,
+        "name": "CreateGitHubRepository",
+        "actions": ["Create repo", "Add files", "Create directory structure", "Initial commit"],
+        "duration": "~10s"
+      },
+      {
+        "stage": 9,
+        "name": "FinalizeProject",
+        "actions": ["Update status", "Send notification", "Track usage"],
+        "duration": "~1s"
+      }
+    ],
+    "total_duration": "~50s",
+    "parallelization": false,
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff": "exponential"
+    }
+  },
+  
+  "apiIntegrations": {
+    "openai": {
+      "models": ["gpt-4", "gpt-4-turbo"],
+      "endpoints": ["completions", "chat/completions"],
+      "rate_limits": "10000 TPM",
+      "cost_tracking": true
+    },
+    "anthropic": {
+      "models": ["claude-3-opus", "claude-3-sonnet"],
+      "endpoints": ["messages"],
+      "rate_limits": "1000 RPM",
+      "cost_tracking": true
+    },
+    "github": {
+      "scopes": ["repo", "write:org"],
+      "operations": ["create_repo", "create_file", "create_tree"],
+      "rate_limits": "5000 requests/hour"
+    },
+    "stripe": {
+      "products": ["subscription", "usage_based_billing"],
+      "webhooks": ["subscription.*", "invoice.*", "customer.*"],
+      "payment_methods": ["card", "bank_transfer"]
+    }
+  },
+  
+  "security": {
+    "authentication": {
+      "type": "JWT",
+      "algorithm": "RS256",
+      "expiration": "24h",
+      "refresh_token": true
+    },
+    "authorization": {
+      "model": "RBAC",
+      "roles": ["user", "premium", "admin"],
+      "middleware": ["auth_required", "subscription_required"]
+    },
+    "encryption": {
+      "at_rest": "AES-256-GCM",
+      "in_transit": "TLS 1.3",
+      "key_management": "AWS KMS"
+    },
+    "compliance": {
+      "standards": ["GDPR", "SOC2", "PCI-DSS"],
+      "audit_logging": true,
+      "data_retention": "90 days"
+    }
+  },
+  
+  "infrastructure": {
+    "hosting": {
+      "provider": "AWS",
+      "regions": ["us-east-1", "eu-west-1"],
+      "services": ["ECS", "RDS", "ElastiCache", "S3", "CloudFront"]
+    },
+    "monitoring": {
+      "apm": "Datadog",
+      "errors": "Sentry",
+      "logs": "CloudWatch",
+      "metrics": ["response_time", "error_rate", "generation_success_rate"]
+    },
+    "ci_cd": {
+      "platform": "GitHub Actions",
+      "stages": ["test", "build", "deploy"],
+      "environments": ["development", "staging", "production"]
+    },
+    "scaling": {
+      "auto_scaling": true,
+      "min_instances": 2,
+      "max_instances": 20,
+      "metrics": ["CPU", "memory", "queue_depth"]
+    }
+  },
+  
+  "features": {
+    "core": [
+      "AI-powered project generation",
+      "Communication schema creation",
+      "Automatic GitHub repository setup",
+      "Real-time progress tracking",
+      "Comprehensive documentation generation"
+    ],
+    "premium": [
+      "Priority queue processing",
+      "Custom templates",
+      "White-label options",
+      "API access",
+      "Advanced analytics"
+    ],
+    "upcoming": [
+      "Multi-language support",
+      "Team collaboration",
+      "CI/CD pipeline generation",
+      "Kubernetes manifests generation",
+      "Custom AI model fine-tuning"
+    ]
+  },
+  
+  "performance": {
+    "targets": {
+      "api_response_time": "<200ms",
+      "generation_time": "<60s",
+      "uptime_sla": "99.9%",
+      "concurrent_users": 10000
+    },
+    "optimizations": [
+      "Redis caching",
+      "Database connection pooling",
+      "CDN for static assets",
+      "Lazy loading",
+      "Code splitting"
+    ]
+  },
+  
+  "developmentPlan": {
+    "milestones": [
+      {
+        "milestone": "M1",
+        "name": "Core Backend",
+        "duration": "2 weeks",
+        "deliverables": ["Auth service", "Project API", "Database schema"]
+      },
+      {
+        "milestone": "M2",
+        "name": "AI Integration",
+        "duration": "2 weeks",
+        "deliverables": ["OpenAI integration", "Claude integration", "Generation pipeline"]
+      },
+      {
+        "milestone": "M3",
+        "name": "Schema Generator",
+        "duration": "3 weeks",
+        "deliverables": ["Communication schema algorithm", "Directory README generator", "Criticality scoring"]
+      },
+      {
+        "milestone": "M4",
+        "name": "GitHub Integration",
+        "duration": "1 week",
+        "deliverables": ["Repository creation", "File management", "Commit automation"]
+      },
+      {
+        "milestone": "M5",
+        "name": "Frontend Development",
+        "duration": "3 weeks",
+        "deliverables": ["React app", "Dashboard", "Project visualization", "Schema viewer"]
+      },
+      {
+        "milestone": "M6",
+        "name": "Payment Integration",
+        "duration": "1 week",
+        "deliverables": ["Stripe setup", "Subscription management", "Usage tracking"]
+      },
+      {
+        "milestone": "M7",
+        "name": "Testing & Deployment",
+        "duration": "2 weeks",
+        "deliverables": ["Unit tests", "Integration tests", "CI/CD pipeline", "Production deployment"]
+      }
+    ],
+    "total_duration": "14 weeks",
+    "team_size": 4,
+    "budget": "$150,000"
+  }
+}
