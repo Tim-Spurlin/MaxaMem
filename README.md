@@ -2,12 +2,12 @@
 
 <div align="center">
 
-[![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2+-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Rust](https://img.shields.io/badge/Rust-1.75+-000000?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.2+-087EA4?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-[![Stripe](https://img.shields.io/badge/Stripe-Integrated-008CDD?style=for-the-badge&logo=stripe)](https://stripe.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Stripe](https://img.shields.io/badge/Stripe-Integrated-635BFF?style=for-the-badge&logo=stripe)](https://stripe.com/)
+[![License](https://img.shields.io/badge/License-MIT-2F4858?style=for-the-badge)](LICENSE)
 
 **Transform Ideas into Production-Ready Architectures with AI-Powered Intelligence**
 
@@ -35,6 +35,7 @@ Our proprietary Communication Schema technology maps every component interaction
 ## 🏗️ System Architecture
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 graph TB
     subgraph "Client Layer"
         UI[React Frontend]
@@ -90,12 +91,12 @@ graph TB
     API --> STRIPE
     WORKER --> EMAIL
     
-    style UI fill:#61DAFB
-    style API fill:#FF6B00
-    style GPT fill:#00D084
-    style CLAUDE fill:#6366F1
-    style GH fill:#24292E
-    style STRIPE fill:#008CDD
+    style UI fill:#2D3748,stroke:#4A5568,color:#E2E8F0
+    style API fill:#2D3748,stroke:#4A5568,color:#E2E8F0
+    style GPT fill:#1A365D,stroke:#2C5282,color:#BEE3F8
+    style CLAUDE fill:#312E81,stroke:#4338CA,color:#C7D2FE
+    style GH fill:#1A202C,stroke:#2D3748,color:#CBD5E0
+    style STRIPE fill:#312E81,stroke:#4338CA,color:#C7D2FE
 ```
 
 ---
@@ -103,6 +104,7 @@ graph TB
 ## 📊 Generation Pipeline
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 sequenceDiagram
     participant User
     participant Frontend
@@ -153,6 +155,7 @@ sequenceDiagram
 ## 💰 Subscription Tiers & Pricing
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 graph LR
     subgraph "Starter - $29/mo"
         S1[5 Projects/month]
@@ -178,14 +181,15 @@ graph LR
         E6[Custom Integration]
     end
     
-    style S1 fill:#E5E7EB
-    style P1 fill:#60A5FA
-    style E1 fill:#34D399
+    style S1 fill:#374151,stroke:#4B5563,color:#D1D5DB
+    style P1 fill:#1E3A8A,stroke:#2563EB,color:#BFDBFE
+    style E1 fill:#065F46,stroke:#10B981,color:#A7F3D0
 ```
 
 ### Payment Flow
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 stateDiagram-v2
     [*] --> Landing
     Landing --> SignUp: Click Pricing
@@ -363,6 +367,7 @@ maxamem/
 ### 1. AI-Powered Generation
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 graph LR
     subgraph "Input"
         DESC[Project Description]
@@ -392,13 +397,13 @@ graph LR
     CL2 --> DOCS
     CL2 --> SCHEMA
     
-    style DESC fill:#FEF3C7
-    style GPT1 fill:#DBEAFE
-    style GPT2 fill:#DBEAFE
-    style GPT3 fill:#DBEAFE
-    style CL1 fill:#E0E7FF
-    style CL2 fill:#E0E7FF
-    style REPO fill:#D1FAE5
+    style DESC fill:#4B5563,stroke:#6B7280,color:#E5E7EB
+    style GPT1 fill:#1E3A8A,stroke:#3B82F6,color:#BFDBFE
+    style GPT2 fill:#1E3A8A,stroke:#3B82F6,color:#BFDBFE
+    style GPT3 fill:#1E3A8A,stroke:#3B82F6,color:#BFDBFE
+    style CL1 fill:#312E81,stroke:#6366F1,color:#C7D2FE
+    style CL2 fill:#312E81,stroke:#6366F1,color:#C7D2FE
+    style REPO fill:#064E3B,stroke:#10B981,color:#A7F3D0
 ```
 
 ### 2. Communication Schema Magic
@@ -441,6 +446,7 @@ Every directory gets:
 ## 🔒 Security & Compliance
 
 ```mermaid
+%%{init: {'theme':'dark'}}%%
 graph TB
     subgraph "Authentication"
         JWT[JWT Tokens]
@@ -465,6 +471,11 @@ graph TB
         CORS[CORS Policy]
         CSP[Content Security]
     end
+    
+    style JWT fill:#374151,stroke:#4B5563,color:#D1D5DB
+    style ENC fill:#374151,stroke:#4B5563,color:#D1D5DB
+    style GDPR fill:#374151,stroke:#4B5563,color:#D1D5DB
+    style RATE fill:#374151,stroke:#4B5563,color:#D1D5DB
 ```
 
 ---
