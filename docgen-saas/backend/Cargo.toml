@@ -1,0 +1,52 @@
+[package]
+name = "docgen-saas"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "docgen-saas"
+path = "src/main.rs"
+
+[dependencies]
+# Web Framework
+actix-web = "4.4"
+actix-ws = "0.2"
+actix-cors = "0.6"
+
+# Database
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls", "uuid", "time", "json"] }
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Async Runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Authentication
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+
+# GitHub API
+octocrab = "0.32"
+git2 = "0.18"
+
+# HTTP Client
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# OpenAI
+async-openai = "0.19"
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+dotenv = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+base64 = "0.21"
+anyhow = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+actix-rt = "2.9"
