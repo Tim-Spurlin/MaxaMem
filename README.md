@@ -243,7 +243,7 @@ cp .env.example .env
 
 ```bash
 # Start PostgreSQL and Redis
-docker-compose up -d postgres redis
+docker compose up -d postgres redis
 
 # Run migrations
 cargo run --bin migrate
@@ -269,7 +269,7 @@ make start
 
 ```bash
 # Build and run everything with Docker
-docker-compose up --build
+docker compose up --build
 
 # Access at http://localhost:3000
 ```

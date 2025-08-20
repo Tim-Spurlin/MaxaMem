@@ -41,3 +41,15 @@ Cargo.lock
 
 # Node.js dependencies
 node_modules/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/.vite/
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
